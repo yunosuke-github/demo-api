@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-server
+spec:
+  selector:
+    matchLabels:
+      app: mysql-server
+  template:
+    metadata:
+      labels:
+        app: mysql-server
+    spec:
+      containers:
+        - image: mysql:8.0
+          name: mysql
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: root_pass
+          volumeMounts:
+            - name: mysql-server-initdb
+              # ここにファイルを配置するとDocker Imageが立ち上がった時に実行してくれる
+              mountPath: /docker-entrypoint-initdb.d
+          ports:
+            - containerPort: 3306
+              name: mysql
+      volumes:
+        - name: mysql-server-initdb
+          configMap:
+            name: mysql-server-initdb-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-server
+spec:
+  type: ClusterIP
+  ports:
+    - name: mysql
+      port: 3306
+      targetPort: 3306
+      protocol: TCP
+  selector:
+    app: mysql-server
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-server-initdb-config
+data:
+  createdb.sql: |
+    CREATE DATABASE demo;
+    USE demo;
+    CREATE TABLE users (
+      ID       BIGINT(20) AUTO_INCREMENT PRIMARY KEY,
+      NAME     VARCHAR(1024) NOT NULL,
+      EMAIL    VARCHAR(1024) NOT NULL
+    );
